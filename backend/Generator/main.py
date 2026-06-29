@@ -373,24 +373,27 @@ class FileProcessor:
     def extract_text_from_audio(self, file_path):
         wav_path = file_path
         request_id = uuid.uuid4().hex
-        if file_path.endswith('.mp3'):
-            audio = AudioSegment.from_file(file_path, format='mp3')
-            wav_path = os.path.join(self.upload_folder, f"{request_id}.wav")
-            audio.export(wav_path, format='wav')
-            
-        r = sr.Recognizer()
-        audio = AudioSegment.from_wav(wav_path)
-        
-        chunk_length_ms = 60 * 1000
-        chunks = [
-            audio[i: i + chunk_length_ms] for i in range(0, len(audio), chunk_length_ms)
-        ]
-        
-        full_text = []
         chunk_files = []
-        
         try:
-            for i, chunk in enumerate(chunks):
+            if file_path.endswith('.mp3'):
+                audio = AudioSegment.from_file(file_path, format='mp3')
+                wav_path = os.path.join(self.upload_folder, f"{request_id}.wav")
+                audio.export(wav_path, format='wav')
+            
+            r = sr.Recognizer()
+            audio = AudioSegment.from_wav(wav_path)
+            
+            # Enforce max duration of 10 minutes (600,000 milliseconds)
+            max_duration_ms = 10 * 60 * 1000
+            if len(audio) > max_duration_ms:
+                raise ValueError("Audio file is too long. Maximum supported duration is 10 minutes.")
+            
+            chunk_length_ms = 60 * 1000
+            audio_len = len(audio)
+            
+            full_text = []
+            for i, start_ms in enumerate(range(0, audio_len, chunk_length_ms)):
+                chunk = audio[start_ms : start_ms + chunk_length_ms]
                 chunk_filename = os.path.join(self.upload_folder, f"{request_id}_chunk_{i}.wav")
                 chunk_files.append(chunk_filename)
                 chunk.export(chunk_filename, format='wav')
@@ -414,22 +417,28 @@ class FileProcessor:
         return "\n".join(full_text)
 
     def process_file(self, file):
-        file_path = os.path.join(self.upload_folder, file.filename)
+        # Extract and validate extension
+        _, ext = os.path.splitext(file.filename)
+        ext = ext.lower()
+        if ext not in ['.txt', '.pdf', '.docx', '.wav', '.mp3']:
+            raise ValueError('Unsupported file format')
+
+        # Generate safe storage name to prevent path traversal & collisions
+        temp_filename = f"{uuid.uuid4().hex}{ext}"
+        file_path = os.path.join(self.upload_folder, temp_filename)
         file.save(file_path)
         content = ""
 
         try:
-            if file.filename.endswith('.txt'):
+            if ext == '.txt':
                 with open(file_path, 'r') as f:
                     content = f.read()
-            elif file.filename.endswith('.pdf'):
+            elif ext == '.pdf':
                 content = self.extract_text_from_pdf(file_path)
-            elif file.filename.endswith('.docx'):
+            elif ext == '.docx':
                 content = self.extract_text_from_docx(file_path)
-            elif file.filename.endswith('.wav') or file.filename.endswith('.mp3'):
+            elif ext in ['.wav', '.mp3']:
                 content = self.extract_text_from_audio(file_path)
-            else:
-                raise ValueError('Unsupported file format')
         finally:
             if os.path.exists(file_path):
                 os.remove(file_path)

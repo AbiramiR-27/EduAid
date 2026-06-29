@@ -24,7 +24,8 @@ EduAid is one such project currently available in the form of a browser extensio
 
 ## System Requirements
 
-- **ffmpeg** or **libav** installed and available on your system `PATH`. The backend's `extract_text_from_audio()` method (in `backend/Generator/main.py`) uses `pydub` to convert MP3 to WAV, and `pydub` depends on these tools for audio transcoding.
+- **ffmpeg** or **libav** installed and available on your system `PATH`. Required for transcoding audio formats such as `.mp3` to `.wav`. (Note: `.wav` files are supported directly by the backend and do not require conversion).
+- The Python dependencies **pydub** and **SpeechRecognition** must be installed (these are automatically installed via `pip install -r requirements.txt`).
 
 ## Installation and Setup
 

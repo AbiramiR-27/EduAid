@@ -239,6 +239,7 @@ function Second() {
           <div>
             <input
               type="file"
+              accept=".txt,.pdf,.docx,.mp3,.wav"
               ref={fileInputRef}
               onChange={handleFileUpload}
               style={{ display: 'none' }}
