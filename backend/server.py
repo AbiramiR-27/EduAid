@@ -497,8 +497,10 @@ def upload_file():
 
     try:
         content = file_processor.process_file(file)
-    except (ValueError, RuntimeError) as e:
+    except ValueError as e:
         return jsonify({"error": str(e)}), 400
+    except RuntimeError as e:
+        return jsonify({"error": str(e)}), 503
     
     if content:
         return jsonify({"content": content})

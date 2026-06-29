@@ -381,6 +381,7 @@ class FileProcessor:
                 audio.export(wav_path, format='wav')
             
             r = sr.Recognizer()
+            r.operation_timeout = 20  # Fail fast if speech recognition hangs
             audio = AudioSegment.from_wav(wav_path)
             
             # Enforce max duration of 10 minutes (600,000 milliseconds)
@@ -426,10 +427,10 @@ class FileProcessor:
         # Generate safe storage name to prevent path traversal & collisions
         temp_filename = f"{uuid.uuid4().hex}{ext}"
         file_path = os.path.join(self.upload_folder, temp_filename)
-        file.save(file_path)
         content = ""
 
         try:
+            file.save(file_path)
             if ext == '.txt':
                 with open(file_path, 'r') as f:
                     content = f.read()
